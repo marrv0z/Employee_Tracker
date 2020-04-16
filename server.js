@@ -181,9 +181,9 @@ function updateEmpRol(){
         var thisID;
 
         // obtain role, console log it, and confirm
-        var queryString = "SELECT * FROM employee WHERE first_name = ?";
+        var queryString = "SELECT * FROM employee WHERE first_name = ? AND last_name = ?";
 
-        connection.query(queryString, [firstN], function(err, res){
+        connection.query(queryString, [firstN,lastN], function(err, res){
             if (err) throw err;
             //console.log(res[0].role_id);
 
@@ -209,14 +209,15 @@ function updateEmpRol(){
                         connection.query("SELECT * FROM role_", function(err,res){
                             if (err) throw err;
 
-                            var resSTring = JSON.stringify(res);
+                            //var resSTring = JSON.stringify(res);
         
                             var options = [];
         
                             for(var i =0; i<res.length;i++){
-                                options += `${res[i].id} ${res[i].title} `;
+                                options.push(`${res[i].id} ${res[i].title}`);
                             }
-                            console.log("HERE" + options);
+                            //JSON.parse(options);
+                            console.log(options);
         
                             inquirer.prompt({
                                 type: "list",
@@ -227,12 +228,13 @@ function updateEmpRol(){
                                 var newRole = dataR.newrole.split(" ");
                                 var newRoleID = newRole[0];
         
-                                connection.query("UPDATE employee SET role_id = ? WHERE first_name = ? last_name = ?", [newRoleID, firstN, lastN],function(err,result){
+                                connection.query("UPDATE employee SET role_id = ? WHERE first_name = ? AND last_name = ?", [newRoleID, firstN, lastN],function(err,result){
                                     if (err) throw err;
-                                    console.log(`Success! ${result.first_name} new role ID is: ${result.role_id}.`); 
+                                    //console.log(result);
+                                    console.log(`Success! ${firstN} ${lastN} new role ID is: ${newRoleID}.`);
+                                    init();
                                 });
-        
-                                init();
+                                
                             });
                         });  
                     }
@@ -405,30 +407,44 @@ function viewEmpDep(){
         if (err) throw err;
 
         for (var i =0; i < res.length; i++){
-            depOptions += JSON.stringify(res[i].name_);
+            depOptions.push(`${res[i].id} ${res[i].name_}`);
         }
-    });
-
-    inquirer.prompt({
-        type: "list",
-        message: "Choose a department:",
-        choices: depOptions,
-        name: "selectDept"
-    }).then(function(data){
-        var dept = data.selectDept;
-
-        connection.query("SELECT * FROM employee WHERE department_id = ?", [dept], function(err,result){
-            if (err) throw err;
-
-            console.log(`Emploeyees in the ${dept[1]} department`);
-
-            for(var i = 0; i < result.length; i++){
-                console.log(`ID: ${result[i].id} | Name: ${result[i].first_name} ${result[i].last_name}`);
-            }
-        });
         
-        init();
+        //console.log(depOptions);
+
+        inquirer.prompt({
+            type: "list",
+            message: "Choose a department:",
+            choices: depOptions,
+            name: "selectDept"
+        }).then(function(data){
+            var dept = data.selectDept.split(" ");
+            var thisdeptID = dept[0];
+            var thisdeptNa = dept[1];
+
+            connection.query("SELECT * FROM role_ WHERE department_id = ?",[thisdeptID], function(err,response){
+                if (err) throw err;
+                
+                console.log(`Employees in the ${thisdeptNa} department:`);
+                var roleIDDD;
+                for (var i =0; i<response.length; i++){
+                    roleIDDD = response[i].id;
+                    connection.query("SELECT * FROM employee WHERE role_id = ?", [roleIDDD], function(err,result){
+                        if (err) throw err;
+                        
+
+                        for(var i = 0; i < result.length; i++){
+                            console.log(`ID: ${result[i].id} | Name: ${result[i].first_name} ${result[i].last_name}`);
+                        }
+                    });
+                } 
+                setTimeout(init,2000);
+            });
+            
+        });
     });
+
+    
 }
 
 function viewEmpRol(){
@@ -440,30 +456,33 @@ function viewEmpRol(){
         if (err) throw err;
 
         for (var i =0; i < res.length; i++){
-            roleOptions += JSON.stringify(res[i].id + " " + res[i].title);
+            roleOptions.push(`${res[i].id} ${res[i].title}`);
         }
-    });
 
-    inquirer.prompt({
-        type: "list",
-        message: "Choose a role:",
-        choices: roleOptions,
-        name: "selectRole"
-    }).then(function(data){
-        var roleS = data.selectROle.split(" ");
-
-        connection.query("SELECT * FROM employee WHERE role_id = ?", [roleS[0]], function(err,result){
-            if (err) throw err;
-
-            console.log(`Emploeyees with the role ${roleS[1]}`);
-
-            for(var i = 0; i < result.length; i++){
-                console.log(`ID: ${result[i].id} | Name: ${result[i].first_name} ${result[i].last_name}`);
-            }
+        inquirer.prompt({
+            type: "list",
+            message: "Choose a role:",
+            choices: roleOptions,
+            name: "selectRole"
+        }).then(function(data){
+            var roleS = data.selectRole.split(" ");
+            var roleNam = roleS.join(" ");
+    
+            connection.query("SELECT * FROM employee WHERE role_id = ?", [roleS[0]], function(err,result){
+                if (err) throw err;
+    
+                console.log(`Employees with the role ${roleNam}`);
+    
+                for(var i = 0; i < result.length; i++){
+                    console.log(`ID: ${result[i].id} | Name: ${result[i].first_name} ${result[i].last_name}`);
+                }
+            });
+            
+            setTimeout(init,2000);
         });
-        
-        init();
     });
+
+    
 }
 
 // function viewEmpMan(){
