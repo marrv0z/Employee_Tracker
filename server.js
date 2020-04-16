@@ -178,62 +178,72 @@ function updateEmpRol(){
         var firstN = data.first_n;
         var lastN = data.last_n;
 
+        var thisID;
+
         // obtain role, console log it, and confirm
-        var queryString = "SELECT role_id FROM employee WHERE ? ?";
+        var queryString = "SELECT * FROM employee WHERE first_name = ?";
 
-        connection.query(queryString, {first_name: firstN, last_name: lastN}, function(err, res){
+        connection.query(queryString, [firstN], function(err, res){
             if (err) throw err;
-            //console.log(res.role_id);
+            //console.log(res[0].role_id);
 
-            var thisID = res.role_id;
+            thisID = res[0].role_id;
 
-            connection.query("SELECT title FROM role_ WHERE ?", {id: thisID}, function(err, response){
+            console.log(thisID);
+
+            connection.query("SELECT * FROM role_ WHERE id = ?", [thisID], function(err, response){
                 if (err) throw err;
-                console.log(`${firstN} ${lastN} role is ${response.title}`); 
-            });
-        });
 
-        inquirer.prompt({
-            type: "confirm",
-            message: `Are you sure you would like to change ${firstN} ${lastN}'s role?`,
-            name: "changerole"
-        }).then(function(dataSet){
-            if (dataSet.changerole == true){
-                // change role
+                //console.log(response);
 
-                connection.query("SELECT * FROM role_", function(err,res){
-                    if (err) throw err;
+                console.log(`${firstN} ${lastN} role is ${response[0].title}`); 
 
-                    var options = [];
+                inquirer.prompt({
+                    type: "confirm",
+                    message: `Are you sure you would like to change ${firstN} ${lastN}'s role?`,
+                    name: "changerole"
+                }).then(function(dataSet){
+                    if (dataSet.changerole == true){
+                        // change role
+        
+                        connection.query("SELECT * FROM role_", function(err,res){
+                            if (err) throw err;
 
-                    for(var i =0; i<res.length;i++){
-                        options += JSON.stringify(res[i].id + " "+ res[i].title);
+                            var resSTring = JSON.stringify(res);
+        
+                            var options = [];
+        
+                            for(var i =0; i<res.length;i++){
+                                options += `${res[i].id} ${res[i].title} `;
+                            }
+                            console.log("HERE" + options);
+        
+                            inquirer.prompt({
+                                type: "list",
+                                message: "Select new role: ",
+                                choices: options,
+                                name: "newrole"
+                            }).then(function (dataR){
+                                var newRole = dataR.newrole.split(" ");
+                                var newRoleID = newRole[0];
+        
+                                connection.query("UPDATE employee SET role_id = ? WHERE first_name = ? last_name = ?", [newRoleID, firstN, lastN],function(err,result){
+                                    if (err) throw err;
+                                    console.log(`Success! ${result.first_name} new role ID is: ${result.role_id}.`); 
+                                });
+        
+                                init();
+                            });
+                        });  
                     }
 
-                    inquirer.prompt({
-                        type: "list",
-                        message: "Select new role: ",
-                        choices: options,
-                        name: "newrole"
-                    }).then(function (dataR){
-                        var newRole = dataR.newrole.split(" ");
-                        var newRoleID = newRole[0];
-
-                        connection.query("UPDATE employee SET role_id = ? WHERE first_name = ? last_name = ?", [newRoleID, firstN, lastN],function(err,result){
-                            if (err) throw err;
-                            console.log(`Success! ${result.first_name} new role ID is: ${result.role_id}.`); 
-                        });
-                        
+                    else{
+                        // initialize again
+                        console.log("Ok, no changes were made.");
                         init();
-                    });
+                    }
                 });
-                
-            }
-            else{
-                // initialize again
-                console.log("Ok, no changes were made.");
-                init();
-            }
+            });
         });
     });
 }
@@ -529,7 +539,7 @@ function removeEmp(){
             if (dataSet.removeE == true){
                 // remove emp
 
-                connection.query("DELETE FROM employee WHERE first_name = ? last_name = ?", [firstN,lastN], function(err, res){
+                connection.query("DELETE FROM employee WHERE first_name = ?", [firstN], function(err, res){
                     if (err) throw err;
                     console.log(`Employee ${firstN} ${lastN} has been removed from the database.`)
                 });
